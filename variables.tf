@@ -28,12 +28,6 @@ variable "MINIO_ROOT_PASSWORD" {
 
 }
 
-variable "buckets_name" {
-
-  type    = list(string)
-  default = ["rawdata", "processeddata", "concat", "export"]
-
-}
 
 variable "KEYCLOAK_ADMIN" {
   type    = string

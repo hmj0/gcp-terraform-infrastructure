@@ -55,10 +55,20 @@ resource "google_cloud_run_v2_service_iam_member" "minio_public" {
 }
 
 
-resource "minio_s3_bucket" "temporary_data" {
-  for_each = toset(var.buckets_name)
+resource "null_resource" "minio_buckets" {
+  triggers = {
+    minio_uri = google_cloud_run_v2_service.minio_hmj01.uri
+  }
 
-  bucket        = each.value
-  acl           = "private"
-  force_destroy = true
+  provisioner "local-exec" {
+    command = <<-EOT
+      mc alias set myminio ${google_cloud_run_v2_service.minio_hmj01.uri} minioadmin "${var.MINIO_ROOT_PASSWORD}"
+      mc mb --ignore-existing myminio/concat
+      mc mb --ignore-existing myminio/rawdata
+      mc mb --ignore-existing myminio/processeddata
+      mc mb --ignore-existing myminio/export
+    EOT
+  }
+
+  depends_on = [google_cloud_run_v2_service.minio_hmj01]
 }
