@@ -1,5 +1,6 @@
 name: terraform_pipeline
 
+# accord des permissions storage au sa 
 permissions:
   contents: read
   id-token: write
