@@ -25,6 +25,7 @@ on:
           - plan
           - apply
           - destroy
+          - bootstrap
         default: plan
 
 jobs:
@@ -55,6 +56,8 @@ jobs:
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 #v5
       - name: Installation Et Configuration De Terraform
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e #v4
+        with:
+          terraform_version: "1.15.8"
 
       - name: Authentification de Github Actions A GCP
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 #v3
@@ -83,9 +86,51 @@ jobs:
           archive: false
           retention-days: 1
 
+  terraform_bootstrap:
+    needs: terraform_init_fmt_validate
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'bootstrap'
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Recuperation du code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 #v5
+      - name: Installation Et Configuration De Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e #v4
+        with:
+          terraform_version: "1.15.8"
+
+      - name: Download de l'artefact .terraform
+        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e #v4.1.7
+        with:
+          name: terraform-init-output
+
+      - name: Extraction du dossier .terraform
+        run: tar -xvf terraform-init.tar
+
+      - name: Authentification de Github Actions A GCP
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 #v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+
+      - name: Export des variables Terraform
+        run: |
+          echo "TF_VAR_MINIO_ROOT_PASSWORD=${{ secrets.MINIO_ROOT_PASSWORD }}" >> "$GITHUB_ENV"
+          echo "TF_VAR_KEYCLOAK_ADMIN_PASSWORD=${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}" >> "$GITHUB_ENV"
+
+      - name: Bootstrap des services Cloud Run
+        run: |
+          terraform apply -auto-approve \
+            -target=google_cloud_run_v2_service.minio_hmj01 \
+            -target=google_cloud_run_v2_service.keyclock_hmj01
+
   terraform_plan:
     needs: terraform_init_fmt_validate
-    if: github.event_name != 'workflow_dispatch' || github.event.inputs.action != 'destroy'
+    if: github.event_name != 'workflow_dispatch' || (github.event.inputs.action != 'destroy' && github.event.inputs.action != 'bootstrap')
     permissions:
       contents: read
       id-token: write
@@ -95,6 +140,8 @@ jobs:
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 #v5
       - name: Installation Et Configuration De Terraform
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e #v4
+        with:
+          terraform_version: "1.15.8"
 
       - name: Download de l'artefact .terraform
         uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e #v4.1.7
@@ -142,6 +189,8 @@ jobs:
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 #v5
       - name: Installation Et Configuration De Terraform
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e #v4
+        with:
+          terraform_version: "1.15.8"
 
       - name: Download de l'artefact du plan
         uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e #v4.1.7
@@ -158,12 +207,11 @@ jobs:
           workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
 
- 
       - name: Export des variables Terraform
         run: |
           echo "TF_VAR_MINIO_ROOT_PASSWORD=${{ secrets.MINIO_ROOT_PASSWORD }}" >> "$GITHUB_ENV"
           echo "TF_VAR_KEYCLOAK_ADMIN_PASSWORD=${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}" >> "$GITHUB_ENV"
-            
+
       - name: Terraform apply
         run: terraform apply -auto-approve tfplan
 
@@ -180,6 +228,8 @@ jobs:
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 #v5
       - name: Installation Et Configuration De Terraform
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e #v4
+        with:
+          terraform_version: "1.15.8"
 
       - name: Download de l'artefact .terraform
         uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e #v4.1.7
