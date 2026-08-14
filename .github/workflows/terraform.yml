@@ -97,7 +97,7 @@ jobs:
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e #v4
 
       - name: Download de l'artefact .terraform
-        uses: actions/download-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 #v4.6.2
+        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e #v4.1.7
         with:
           name: terraform-init-output
 
@@ -157,11 +157,9 @@ jobs:
       - name: " Apply_tagert "
         run: |
 
-             export MINIO_ROOT_PASSWORD = "${{secrets.MINIO_ROOT_PASSWORD}}"
-             export KEYCLOAK_ADMIN_PASSWORD = "${{secrets.KEYCLOAK_ADMIN_PASSWORD }}""
+             export MINIO_ROOT_PASSWORD="${{secrets.MINIO_ROOT_PASSWORD}}"
+             export KEYCLOAK_ADMIN_PASSWORD="${{secrets.KEYCLOAK_ADMIN_PASSWORD}}""
             
-             terraform apply -target=google_cloud_run_v2_service.minio_hmj01 -auto-approve
-
       - name: Terraform apply
         run: terraform apply -auto-approve tfplan
 
