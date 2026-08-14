@@ -13,7 +13,7 @@ resource "google_cloud_run_v2_service" "minio_hmj01" {
   ingress = "INGRESS_TRAFFIC_ALL"
 
   template {
-    
+
     scaling {
       min_instance_count = 1
     }

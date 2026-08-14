@@ -15,7 +15,7 @@ terraform {
   backend "gcs" {
     bucket = "terraform-bucket-state-hmj01"
     prefix = "terraform/state"
-    
+
   }
 }
 
