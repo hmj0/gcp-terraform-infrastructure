@@ -110,6 +110,10 @@ jobs:
           project_id: ${{ env.GCP_PROJECT_ID }}
           workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+      - name: Export des variables Terraform
+        run: |
+                echo "TF_VAR_MINIO_ROOT_PASSWORD=${{ secrets.MINIO_ROOT_PASSWORD }}" >> "$GITHUB_ENV"
+                echo "TF_VAR_KEYCLOAK_ADMIN_PASSWORD=${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}" >> "$GITHUB_ENV"
 
       - name: Terraform plan
         run: terraform plan -no-color -out=tfplan
@@ -154,11 +158,11 @@ jobs:
           workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
 
-      - name: " Apply_tagert "
+ 
+      - name: Export des variables Terraform
         run: |
-
-             export MINIO_ROOT_PASSWORD="${{secrets.MINIO_ROOT_PASSWORD}}"
-             export KEYCLOAK_ADMIN_PASSWORD="${{secrets.KEYCLOAK_ADMIN_PASSWORD}}""
+          echo "TF_VAR_MINIO_ROOT_PASSWORD=${{ secrets.MINIO_ROOT_PASSWORD }}" >> "$GITHUB_ENV"
+          echo "TF_VAR_KEYCLOAK_ADMIN_PASSWORD=${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}" >> "$GITHUB_ENV"
             
       - name: Terraform apply
         run: terraform apply -auto-approve tfplan
@@ -191,6 +195,11 @@ jobs:
           project_id: ${{ env.GCP_PROJECT_ID }}
           workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+
+      - name: Export des variables Terraform
+        run: |
+          echo "TF_VAR_MINIO_ROOT_PASSWORD=${{ secrets.MINIO_ROOT_PASSWORD }}" >> "$GITHUB_ENV"
+          echo "TF_VAR_KEYCLOAK_ADMIN_PASSWORD=${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}" >> "$GITHUB_ENV"
 
       - name: Terraform destroy
         run: terraform destroy -auto-approve
