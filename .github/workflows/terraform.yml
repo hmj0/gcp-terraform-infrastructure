@@ -176,9 +176,12 @@ jobs:
 
       - name: Installation du client MinIO (mc)
         run: |
-          curl -O https://dl.min.io/client/mc/release/linux-amd64/mc
+
+          curl -fL -o mc https://dl.min.io/client/mc/release/linux-amd64/mc
           chmod +x mc
           sudo mv mc /usr/local/bin/
+          file /usr/local/bin/mc
+
 
       - name: Terraform apply
         run: terraform apply -auto-approve tfplan
