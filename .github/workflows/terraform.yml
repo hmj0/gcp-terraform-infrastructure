@@ -1,0 +1,197 @@
+name: terraform_pipeline
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  GCP_PROJECT_ID: "agentic-ai-learning-486e"
+  WORKLOAD_IDENTITY_PROVIDER: "projects/80844171008/locations/global/workloadIdentityPools/github-terraform-hmj01-pool/providers/github-terraform-hmj01-provider"
+  GCP_SERVICE_ACCOUNT: "terraform-deploy-hmj01-sa@agentic-ai-learning-486e.iam.gserviceaccount.com"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action a executer manuellement'
+        required: true
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+        default: plan
+
+jobs:
+  terraform_security:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Recuperation du code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 #v5
+      - name: Run Trivy scanner
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 #v0.36.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          scanners: 'vuln,misconfig,secret'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          ignore-unfixed: true
+          exit-code: '1'
+          format: 'table'
+
+  terraform_init_fmt_validate:
+    needs: terraform_security
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Recuperation du code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 #v5
+      - name: Installation Et Configuration De Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e #v4
+
+      - name: Authentification de Github Actions A GCP
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 #v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+
+      - name: Terraform init
+        run: terraform init
+
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Archiver le dossier .terraform
+        run: tar -cvf terraform-init.tar .terraform
+
+      - name: Upload de l'artefact .terraform
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 #v4.6.2
+        with:
+          name: terraform-init-output
+          path: terraform-init.tar
+          archive: false
+          retention-days: 1
+
+  terraform_plan:
+    needs: terraform_init_fmt_validate
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.action != 'destroy'
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Recuperation du code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 #v5
+      - name: Installation Et Configuration De Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e #v4
+
+      - name: Download de l'artefact .terraform
+        uses: actions/download-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 #v4.6.2
+        with:
+          name: terraform-init-output
+
+      - name: Extraction du dossier .terraform
+        run: tar -xvf terraform-init.tar
+
+      - name: Authentification de Github Actions A GCP
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 #v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+
+      - name: Terraform plan
+        run: terraform plan -no-color -out=tfplan
+
+      - name: Archiver le plan
+        run: tar -cvf terraform-plan.tar tfplan .terraform
+
+      - name: Upload de l'artefact du plan
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 #v4.6.2
+        with:
+          name: terraform-plan-output
+          path: terraform-plan.tar
+          archive: false
+          retention-days: 1
+
+  terraform_apply:
+    needs: terraform_plan
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply'
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Recuperation du code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 #v5
+      - name: Installation Et Configuration De Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e #v4
+
+      - name: Download de l'artefact du plan
+        uses: actions/download-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 #v4.6.2
+        with:
+          name: terraform-plan-output
+
+      - name: Extraction du plan
+        run: tar -xvf terraform-plan.tar
+
+      - name: Authentification de Github Actions A GCP
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 #v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+
+      - name: " Apply_tagert "
+        run: |
+
+             export MINIO_ROOT_PASSWORD = "${{secrets.MINIO_ROOT_PASSWORD}}"
+             export KEYCLOAK_ADMIN_PASSWORD = "${{secrets.KEYCLOAK_ADMIN_PASSWORD }}""
+            
+             terraform apply -target=google_cloud_run_v2_service.minio_hmj01 -auto-approve
+
+      - name: Terraform apply
+        run: terraform apply -auto-approve tfplan
+
+  terraform_destroy:
+    needs: terraform_init_fmt_validate
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Recuperation du code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 #v5
+      - name: Installation Et Configuration De Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e #v4
+
+      - name: Download de l'artefact .terraform
+        uses: actions/download-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 #v4.6.2
+        with:
+          name: terraform-init-output
+
+      - name: Extraction du dossier .terraform
+        run: tar -xvf terraform-init.tar
+
+      - name: Authentification de Github Actions A GCP
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 #v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+
+      - name: Terraform destroy
+        run: terraform destroy -auto-approve
