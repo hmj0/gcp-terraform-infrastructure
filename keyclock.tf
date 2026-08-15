@@ -10,6 +10,11 @@ resource "google_cloud_run_v2_service" "keyclock_hmj01" {
 
   ingress = "INGRESS_TRAFFIC_ALL"
 
+  scaling {
+    max_instance_count = 1
+    min_instance_count = 1
+  }
+
   template {
     containers {
       image = "keycloak/keycloak:26.7"

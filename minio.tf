@@ -14,8 +14,10 @@ resource "google_cloud_run_v2_service" "minio_hmj01" {
 
   template {
 
+
     scaling {
-      min_instance_count = 1
+      min_instance_count = 1 # evite de re-telecharger le modele a chaque cold start
+      max_instance_count = 1 # chaque instance re-telecharge son propre modele, donc pas de scale-out ici
     }
 
     containers {
