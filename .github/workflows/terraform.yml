@@ -123,6 +123,7 @@ jobs:
         run: |
           echo "TF_VAR_MINIO_ROOT_PASSWORD=${{ secrets.MINIO_ROOT_PASSWORD }}" >> "$GITHUB_ENV"
           echo "TF_VAR_KEYCLOAK_ADMIN_PASSWORD=${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}" >> "$GITHUB_ENV"
+          echo "TF_VAR_POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> "$GITHUB_ENV"
 
       - name: Terraform plan
         run: terraform plan -no-color -out=tfplan
@@ -173,6 +174,7 @@ jobs:
         run: |
           echo "TF_VAR_MINIO_ROOT_PASSWORD=${{ secrets.MINIO_ROOT_PASSWORD }}" >> "$GITHUB_ENV"
           echo "TF_VAR_KEYCLOAK_ADMIN_PASSWORD=${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}" >> "$GITHUB_ENV"
+          echo "TF_VAR_POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> "$GITHUB_ENV"
 
       - name: Installation du client MinIO (mc)
         run: |
@@ -221,6 +223,7 @@ jobs:
         run: |
           echo "TF_VAR_MINIO_ROOT_PASSWORD=${{ secrets.MINIO_ROOT_PASSWORD }}" >> "$GITHUB_ENV"
           echo "TF_VAR_KEYCLOAK_ADMIN_PASSWORD=${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}" >> "$GITHUB_ENV"
+          echo "TF_VAR_POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> "$GITHUB_ENV"
 
       - name: Terraform destroy
         run: terraform destroy -auto-approve
