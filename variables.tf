@@ -41,4 +41,11 @@ variable "KEYCLOAK_ADMIN_PASSWORD" {
 
 }
 
+variable "POSTGRES_PASSWORD" {
+
+  type      = string
+  sensitive = true
+
+}
+
 # DECLARATION DES APIS A ACTIVER
